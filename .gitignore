@@ -1,0 +1,52 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Claude Code
+.claude/
+CLAUDE.md
+.claudeignore
+*.claude
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+htmlcov/
+.coverage
+*.cover
+.hypothesis/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.playwright/
+test-results/
+playwright-report/
+
+# Vercel
+.vercel/
+
+# Misc
+*.csv
+scan_log.csv

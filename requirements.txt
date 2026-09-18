@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+streamlit
+python-dotenv
+requests
+pandas
+numpy
+scikit-learn
+lightgbm
+python-Levenshtein
+tldextract
+joblib
+google-generativeai
+pytest
+pytest-asyncio

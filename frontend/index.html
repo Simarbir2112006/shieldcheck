@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShieldCheck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F7F5;
+    --text: #1A1A1A;
+    --header-bg: #0D1B2A;
+    --header-hover: #1B3A5C;
+    --muted-white: #A0ADB8;
+    --muted-grey: #666666;
+    --border-grey: #E0E0E0;
+    --info-bg: #EAEAEA;
+    --safe: #1E7E34;
+    --suspicious: #F5A623;
+    --dangerous: #C0392B;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  header {
+    background: var(--header-bg);
+    color: #FFFFFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 18px 24px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 18px;
+  }
+
+  .tagline {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted-white);
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 16px 64px;
+    text-align: left;
+  }
+
+  label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  label .optional {
+    font-weight: 400;
+    color: #999999;
+    margin-left: 6px;
+  }
+
+  input[type="text"],
+  textarea {
+    display: block;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: #FFFFFF;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 20px;
+  }
+
+  textarea { resize: vertical; }
+
+  input[type="text"]:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--header-bg);
+  }
+
+  #scanBtn {
+    display: block;
+    width: 100%;
+    background: var(--header-bg);
+    color: #FFFFFF;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    border-radius: 4px;
+    padding: 14px;
+    cursor: pointer;
+  }
+
+  #scanBtn:hover { background: var(--header-hover); }
+  #scanBtn:disabled { opacity: 0.6; cursor: default; }
+
+  #progressWrap {
+    display: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border-grey);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background: var(--header-bg);
+  }
+
+  #errorBox {
+    display: none;
+    border: 1px solid var(--dangerous);
+    color: var(--dangerous);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    margin-top: 20px;
+  }
+
+  #result { display: none; margin-top: 32px; }
+
+  .verdict-banner {
+    border-radius: 4px;
+    padding: 16px 20px;
+    color: #FFFFFF;
+  }
+
+  .verdict-line1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 20px;
+  }
+
+  .verdict-line2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .detection-note {
+    background: var(--info-bg);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-top: 12px;
+  }
+
+  .section-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--muted-grey);
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+
+  .signal-row {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 3px 0;
+  }
+
+  .llm-summary {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-style: italic;
+    margin-bottom: 6px;
+  }
+
+  .footer-line {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--muted-grey);
+    border-top: 1px solid var(--border-grey);
+    margin-top: 24px;
+    padding-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">ShieldCheck</span>
+  <span class="tagline">Phishing detection for small businesses</span>
+</header>
+
+<main>
+  <label for="urlInput">URL to scan</label>
+  <input type="text" id="urlInput" placeholder="https://...">
+
+  <label for="emailInput">Email text<span class="optional">(optional)</span></label>
+  <textarea id="emailInput" rows="5" placeholder="Paste the suspicious email here..."></textarea>
+
+  <button id="scanBtn">Scan</button>
+
+  <div id="progressWrap"><div id="progressBar"></div></div>
+
+  <div id="errorBox"></div>
+
+  <div id="result"></div>
+</main>
+
+<script>
+  const BACKEND_URL = "http://localhost:8000";
+
+  const urlInput = document.getElementById('urlInput');
+  const emailInput = document.getElementById('emailInput');
+  const scanBtn = document.getElementById('scanBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressBar = document.getElementById('progressBar');
+  const errorBox = document.getElementById('errorBox');
+  const resultDiv = document.getElementById('result');
+
+  const VERDICT_META = {
+    safe:       { color: '#1E7E34', emoji: '✅', label: 'Looks Safe' },
+    suspicious: { color: '#F5A623', emoji: '⚠️', label: 'Suspicious' },
+    dangerous:  { color: '#C0392B', emoji: '🚨', label: 'Dangerous' },
+  };
+
+  const FOOTER_TEXT = {
+    safe: "No action needed. This looks legitimate.",
+    suspicious: "Don't share personal info. Verify the sender directly.",
+    dangerous: "Do not click this link or reply to this email.",
+  };
+
+  function showProgress() {
+    progressWrap.style.display = 'block';
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '0%';
+    // Force a reflow so the transition below animates from 0, not skips it.
+    void progressBar.offsetWidth;
+    progressBar.style.transition = 'width 3s linear';
+    progressBar.style.width = '95%';
+  }
+
+  function hideProgress() {
+    progressWrap.style.display = 'none';
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '0%';
+  }
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+  }
+
+  function clearError() {
+    errorBox.style.display = 'none';
+    errorBox.textContent = '';
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function renderResult(data) {
+    const meta = VERDICT_META[data.verdict] || VERDICT_META.safe;
+    let html = '';
+
+    html += `<div class="verdict-banner" style="background:${meta.color}">`;
+    html += `<div class="verdict-line1">${meta.emoji} ${meta.label}</div>`;
+    html += `<div class="verdict-line2">Risk Score: ${Math.round(data.score)} / 100</div>`;
+    html += `</div>`;
+
+    if (data.detection_note) {
+      html += `<div class="detection-note">ℹ️ ${escapeHtml(data.detection_note)}</div>`;
+    }
+
+    html += `<div class="section-title">What we found</div>`;
+
+    const signals = data.signals || {};
+
+    const heuristics = signals.heuristics;
+    if (heuristics && Array.isArray(heuristics.top_signals) && heuristics.top_signals.length) {
+      heuristics.top_signals.forEach(sig => {
+        html += `<div class="signal-row">· ${escapeHtml(sig)}</div>`;
+      });
+    }
+
+    const vt = signals.virustotal;
+    if (vt && vt.vt_total > 0) {
+      const color = vt.vt_malicious > 0 ? VERDICT_META.dangerous.color : VERDICT_META.safe.color;
+      html += `<div class="signal-row">VirusTotal: <span style="color:${color}">${vt.vt_malicious}</span> of ${vt.vt_total} engines flagged this</div>`;
+    }
+
+    const sb = signals.safe_browsing;
+    if (sb && sb.sb_flagged) {
+      html += `<div class="signal-row" style="color:${VERDICT_META.dangerous.color}">Google Safe Browsing: ${escapeHtml(sb.sb_threat_type)}</div>`;
+    }
+
+    const llm = signals.llm;
+    if (llm) {
+      if (llm.llm_summary) {
+        html += `<div class="llm-summary">${escapeHtml(llm.llm_summary)}</div>`;
+      }
+      if (Array.isArray(llm.llm_signals)) {
+        llm.llm_signals.forEach(sig => {
+          html += `<div class="signal-row">· ${escapeHtml(sig)}</div>`;
+        });
+      }
+    }
+
+    html += `<div class="footer-line">${FOOTER_TEXT[data.verdict] || ''}</div>`;
+
+    resultDiv.innerHTML = html;
+    resultDiv.style.display = 'block';
+  }
+
+  async function runScan() {
+    const url = urlInput.value.trim();
+    if (!url) {
+      showError('Please enter a URL to scan.');
+      return;
+    }
+    clearError();
+    resultDiv.style.display = 'none';
+    resultDiv.innerHTML = '';
+
+    scanBtn.disabled = true;
+    showProgress();
+
+    const emailText = emailInput.value.trim();
+    const body = { url: url, email_text: emailText ? emailText : null };
+
+    try {
+      const resp = await fetch(`${BACKEND_URL}/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) {
+        let message = `Scan failed (HTTP ${resp.status}).`;
+        try {
+          const errData = await resp.json();
+          message = errData.detail ? JSON.stringify(errData.detail) : message;
+        } catch (e) { /* body wasn't JSON; keep default message */ }
+        throw new Error(message);
+      }
+
+      const data = await resp.json();
+      hideProgress();
+      renderResult(data);
+    } catch (err) {
+      hideProgress();
+      if (err instanceof TypeError) {
+        showError('Could not reach scanner — is the backend running?');
+      } else {
+        showError(err.message || 'Something went wrong.');
+      }
+    } finally {
+      scanBtn.disabled = false;
+    }
+  }
+
+  scanBtn.addEventListener('click', runScan);
+</script>
+
+</body>
+</html>
