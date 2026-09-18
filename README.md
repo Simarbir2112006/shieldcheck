@@ -4,7 +4,7 @@
 
 Paste a suspicious URL or email and get a plain-English verdict in under 5 seconds. No technical knowledge required.
 
-🔗 **[Live Demo](https://your-vercel-url.vercel.app)**
+🔗 **[Live Demo](https://shieldcheck-lime.vercel.app)**
 
 ---
 
