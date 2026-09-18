@@ -8,7 +8,7 @@ Paste a suspicious URL or email and get a plain-English verdict in under 5 secon
 
 ## The Problem
 
-Small businesses in India are the #1 target for phishing attacks — fake GST notices, HDFC/SBI impersonation, UPI fraud, bogus vendor invoices. They have no IT team to ask. They either click (bad) or ignore legitimate emails (also bad). ShieldCheck gives them a 30-second answer.
+Small businesses in India are the #1 target for phishing attacks: fake GST notices, HDFC/SBI impersonation, UPI fraud, bogus vendor invoices. They have no IT team to ask. They either click (bad) or ignore legitimate emails (also bad). ShieldCheck gives them a 30-second answer.
 
 ## How It Works
 
@@ -26,8 +26,8 @@ Verdicts are returned as:
 | Score | Verdict |
 |---|---|
 | 0–39 | ✅ Looks Safe |
-| 40–74 | ⚠️ Suspicious — Proceed with Caution |
-| 75–100 | 🚨 Dangerous — Do Not Click |
+| 40–74 | ⚠️ Suspicious: Proceed with Caution |
+| 75–100 | 🚨 Dangerous: Do Not Click |
 
 ## Architecture
 
@@ -50,22 +50,22 @@ tests/
 
 **Stack:** FastAPI · LightGBM · Google Gemini · VirusTotal API · Google Safe Browsing API · Vanilla JS · Deployed on Render + Vercel
 
-## Detection Pipeline — Design Decisions
+## Detection Pipeline: Design Decisions
 
 These are the non-obvious decisions made during development and the reasoning behind each.
 
 ### 1. Why four layers instead of just VirusTotal?
 
-VirusTotal and Google Safe Browsing have no data on fresh phishing campaigns — a brand-new domain registered this morning returns zero hits on both. This is the most dangerous case for small businesses, who are frequently targeted by campaigns that haven't hit threat intel feeds yet. The LightGBM heuristics layer and Gemini LLM layer operate entirely on the URL and email content itself, with no dependency on reputation databases. They catch what VT/SB miss.
+VirusTotal and Google Safe Browsing have no data on fresh phishing campaigns. A brand-new domain registered this morning returns zero hits on both. This is the most dangerous case for small businesses, who are frequently targeted by campaigns that haven't hit threat intel feeds yet. The LightGBM heuristics layer and Gemini LLM layer operate entirely on the URL and email content itself, with no dependency on reputation databases. They catch what VT/SB miss.
 
 ### 2. Calibration floor rules
 
 Two explicit floor rules override the weighted score when local detection layers strongly agree:
 
-**Floor 1 — Heuristics + LLM agreement:**
+**Floor 1: Heuristics + LLM agreement:**
 If `heuristics_score > 0.85` AND `llm_score > 0.70`, the score is floored at 70 regardless of VT/SB data. Both independent local layers agree this is high risk. A `detection_note` is added to the response: *"Flagged by local ML and LLM analysis. Threat intel has no data yet (possibly a new campaign)."*
 
-**Floor 2 — Strong LLM signal on email:**
+**Floor 2: Strong LLM signal on email:**
 If email text is provided AND `llm_score > 0.85`, the score is floored at 40 regardless of URL reputation. When a user hands you an email for analysis and the LLM is highly confident it is phishing, a clean URL reputation is not sufficient to call it safe.
 
 **The tradeoff:** Both floors deliberately bias toward false positives over false negatives. For small businesses, a missed phishing attack is far more costly than a false alarm on a legitimate email.
@@ -76,7 +76,7 @@ When email text is provided and `llm_score > 0.60`, the layer weights shift:
 
 | Mode | Heuristics | VirusTotal | Safe Browsing | LLM |
 |---|---|---|---|---|
-| URL only | 40% | 45% | 15% | — |
+| URL only | 40% | 45% | 15% | n/a |
 | URL + email (LLM < 0.60) | 35% | 40% | 15% | 10% |
 | URL + email (LLM > 0.60) | 30% | 25% | 10% | 35% |
 
@@ -88,7 +88,7 @@ LightGBM trains fast, handles tabular features well, and is interpretable via SH
 
 ### 5. Why Gemini over other LLMs?
 
-Gemini Flash Lite has a higher free-tier rate limit than alternatives, which matters at the current scale. The model is prompted to return structured JSON directly via `response_mime_type="application/json"`, which eliminates markdown fence parsing issues. The prompt includes a retry-once mechanism: on JSON parse failure, it retries with an explicit "return raw JSON only" note. On second failure it returns a safe fallback — a logging failure should never crash the endpoint.
+Gemini Flash Lite has a higher free-tier rate limit than alternatives, which matters at the current scale. The model is prompted to return structured JSON directly via `response_mime_type="application/json"`, which eliminates markdown fence parsing issues. The prompt includes a retry-once mechanism: on JSON parse failure, it retries with an explicit "return raw JSON only" note. On second failure it returns a safe fallback; a logging failure should never crash the endpoint.
 
 ### 6. CSV scan logger
 
@@ -166,14 +166,14 @@ See `.env.example` for required keys:
 
 | Variable | Where to get it |
 |---|---|
-| `VT_API_KEY` | [virustotal.com](https://www.virustotal.com) — free tier, 500 req/day |
-| `GOOGLE_AI_STUDIO_KEY` | [aistudio.google.com](https://aistudio.google.com) — free tier |
-| `SAFE_BROWSING_API_KEY` | [Google Cloud Console](https://console.cloud.google.com) — free |
+| `VT_API_KEY` | [virustotal.com](https://www.virustotal.com) (free tier, 500 req/day) |
+| `GOOGLE_AI_STUDIO_KEY` | [aistudio.google.com](https://aistudio.google.com) (free tier) |
+| `SAFE_BROWSING_API_KEY` | [Google Cloud Console](https://console.cloud.google.com) (free) |
 
 ## Deployment
 
-- **Backend:** Render (free tier) — spins down after 15 min inactivity; first request after cold start takes ~30s
-- **Frontend:** Vercel (free tier) — always on, globally distributed
+- **Backend:** Render (free tier): spins down after 15 min inactivity; first request after cold start takes ~30s
+- **Frontend:** Vercel (free tier): always on, globally distributed
 
 ## License
 
