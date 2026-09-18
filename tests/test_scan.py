@@ -1,5 +1,6 @@
 """Hits POST /scan (in-process, no server needed) and prints the full response."""
 
+import csv
 import json
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 import heuristics  # noqa: E402
 import llm_analysis  # noqa: E402
 import threat_intel  # noqa: E402
-from main import app  # noqa: E402
+from main import app, SCAN_LOG_PATH  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -158,3 +159,43 @@ async def test_scan_strong_llm_signal_floors_score_on_clean_url(monkeypatch):
     print(json.dumps(data, indent=2))
     assert data["score"] >= 40.0
     assert data["verdict"] != "safe"
+
+
+@pytest.fixture
+def clean_scan_log():
+    if SCAN_LOG_PATH.exists():
+        SCAN_LOG_PATH.unlink()
+    yield
+    if SCAN_LOG_PATH.exists():
+        SCAN_LOG_PATH.unlink()
+
+
+@pytest.mark.asyncio
+async def test_scan_logger_writes_csv(monkeypatch, clean_scan_log):
+    monkeypatch.setattr(
+        threat_intel,
+        "check_virustotal",
+        AsyncMock(return_value={"vt_score": 0.8, "vt_malicious": 40, "vt_total": 50, "vt_cached": True}),
+    )
+    monkeypatch.setattr(
+        threat_intel,
+        "check_safe_browsing",
+        AsyncMock(return_value={"sb_flagged": True, "sb_threat_type": "SOCIAL_ENGINEERING"}),
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.post(
+            "/scan",
+            json={"url": "http://paypal-login.suspicious-update.tk/verify"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert SCAN_LOG_PATH.exists()
+    with open(SCAN_LOG_PATH, newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    assert rows[0]["verdict"] == data["verdict"]
+    assert rows[0]["url"] == "http://paypal-login.suspicious-update.tk/verify"
