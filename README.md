@@ -6,13 +6,9 @@ Paste a suspicious URL or email and get a plain-English verdict in under 5 secon
 
 🔗 **[Live Demo](https://shieldcheck-lime.vercel.app)**
 
----
-
 ## The Problem
 
 Small businesses in India are the #1 target for phishing attacks — fake GST notices, HDFC/SBI impersonation, UPI fraud, bogus vendor invoices. They have no IT team to ask. They either click (bad) or ignore legitimate emails (also bad). ShieldCheck gives them a 30-second answer.
-
----
 
 ## How It Works
 
@@ -32,8 +28,6 @@ Verdicts are returned as:
 | 0–39 | ✅ Looks Safe |
 | 40–74 | ⚠️ Suspicious — Proceed with Caution |
 | 75–100 | 🚨 Dangerous — Do Not Click |
-
----
 
 ## Architecture
 
@@ -56,8 +50,6 @@ tests/
 
 **Stack:** FastAPI · LightGBM · Google Gemini · VirusTotal API · Google Safe Browsing API · Vanilla JS · Deployed on Render + Vercel
 
----
-
 ## Detection Pipeline — Design Decisions
 
 These are the non-obvious decisions made during development and the reasoning behind each.
@@ -71,12 +63,12 @@ VirusTotal and Google Safe Browsing have no data on fresh phishing campaigns —
 Two explicit floor rules override the weighted score when local detection layers strongly agree:
 
 **Floor 1 — Heuristics + LLM agreement:**
-If `heuristics_score > 0.85` AND `llm_score > 0.70`, the score is floored at 70 ("suspicious") regardless of VT/SB data. Both independent local layers agree this is high risk. A `detection_note` is added to the response: *"Flagged by local ML and LLM analysis. Threat intel has no data yet (possibly a new campaign)."*
+If `heuristics_score > 0.85` AND `llm_score > 0.70`, the score is floored at 70 regardless of VT/SB data. Both independent local layers agree this is high risk. A `detection_note` is added to the response: *"Flagged by local ML and LLM analysis. Threat intel has no data yet (possibly a new campaign)."*
 
 **Floor 2 — Strong LLM signal on email:**
-If email text is provided AND `llm_score > 0.85`, the score is floored at 40 ("suspicious") regardless of URL reputation. When a user hands you an email for analysis and the LLM is highly confident it's phishing, a clean URL reputation is not sufficient to call it safe.
+If email text is provided AND `llm_score > 0.85`, the score is floored at 40 regardless of URL reputation. When a user hands you an email for analysis and the LLM is highly confident it is phishing, a clean URL reputation is not sufficient to call it safe.
 
-**The tradeoff:** Both floors deliberately bias toward false positives over false negatives. For small businesses, a missed phishing attack (credential theft, financial fraud) is far more costly than a false alarm on a legitimate email. Alert fatigue is a secondary concern here.
+**The tradeoff:** Both floors deliberately bias toward false positives over false negatives. For small businesses, a missed phishing attack is far more costly than a false alarm on a legitimate email.
 
 ### 3. Email-aware weight rebalancing
 
@@ -88,21 +80,19 @@ When email text is provided and `llm_score > 0.60`, the layer weights shift:
 | URL + email (LLM < 0.60) | 35% | 40% | 15% | 10% |
 | URL + email (LLM > 0.60) | 30% | 25% | 10% | 35% |
 
-When the LLM finds strong phishing signals in the email content, it earns more weight. Threat intel APIs are demoted because they're less informative than explicit semantic evidence in the email itself.
+When the LLM finds strong phishing signals in the email content, it earns more weight. Threat intel APIs are demoted because they are less informative than explicit semantic evidence in the email itself.
 
 ### 4. Why LightGBM for URL heuristics?
 
-LightGBM trains fast, handles tabular features well, and is interpretable via SHAP — the top 5 features driving each prediction are returned in the API response as `top_signals`. This lets users and developers understand why a URL was flagged, not just that it was flagged. Explainability is a first-class requirement for any security tool used by non-technical users.
+LightGBM trains fast, handles tabular features well, and is interpretable via SHAP. The top 5 features driving each prediction are returned in the API response as `top_signals`. This lets users and developers understand why a URL was flagged, not just that it was flagged. Explainability is a first-class requirement for any security tool used by non-technical users.
 
-### 5. Why Gemini over GPT-4 or Claude?
+### 5. Why Gemini over other LLMs?
 
-Gemini Flash Lite has a higher free-tier rate limit than alternatives, which matters at the current scale. The model is prompted to return structured JSON directly via `response_mime_type="application/json"`, which eliminates markdown fence parsing issues. The prompt includes a retry-once mechanism: on JSON parse failure, it retries with an explicit "return raw JSON only" note. On second failure, it returns a safe fallback `{"llm_score": 0.0, "llm_signals": [], "llm_summary": "Analysis unavailable."}` — a logging failure should never crash the endpoint.
+Gemini Flash Lite has a higher free-tier rate limit than alternatives, which matters at the current scale. The model is prompted to return structured JSON directly via `response_mime_type="application/json"`, which eliminates markdown fence parsing issues. The prompt includes a retry-once mechanism: on JSON parse failure, it retries with an explicit "return raw JSON only" note. On second failure it returns a safe fallback — a logging failure should never crash the endpoint.
 
 ### 6. CSV scan logger
 
-Every successful `/scan` call appends a row to `scan_log.csv` with timestamp, URL, score, verdict, and all signal values. The logger is wrapped in `try/except` — a logging failure never surfaces to the user. This generates the operational data needed to track real usage, tune weights over time, and validate model performance in production.
-
----
+Every successful `/scan` call appends a row to `scan_log.csv` with timestamp, URL, score, verdict, and all signal values. The logger is wrapped in `try/except` so a logging failure never surfaces to the user. This generates the operational data needed to track real usage, tune weights over time, and validate model performance in production.
 
 ## API
 
@@ -112,7 +102,7 @@ Content-Type: application/json
 
 {
   "url": "https://example.com",
-  "email_text": "Dear customer, your account is suspended..."  // optional
+  "email_text": "Dear customer, your account is suspended..."
 }
 ```
 
@@ -141,8 +131,6 @@ Response:
 }
 ```
 
----
-
 ## Running Locally
 
 **Prerequisites:** Python 3.10+, API keys for VirusTotal, Google AI (Gemini), and Google Safe Browsing.
@@ -154,16 +142,14 @@ cd shieldcheck
 # Backend
 cd backend
 pip install -r requirements.txt
-cp ../.env.example .env   # Fill in your API keys
+cp ../.env.example .env
 uvicorn main:app --reload --port 8000
 
 # Frontend (separate terminal)
 cd ../frontend
 # Update BACKEND_URL in index.html to http://localhost:8000
-xdg-open index.html       # or: open index.html on Mac
+xdg-open index.html
 ```
-
----
 
 ## Tests
 
@@ -173,8 +159,6 @@ pytest tests/ -v
 ```
 
 7 tests covering: URL heuristics, VirusTotal response parsing, Safe Browsing flagging, LLM phishing detection, end-to-end pipeline scoring, both calibration floor rules, and CSV scan logger output.
-
----
 
 ## Environment Variables
 
@@ -186,14 +170,10 @@ See `.env.example` for required keys:
 | `GOOGLE_AI_STUDIO_KEY` | [aistudio.google.com](https://aistudio.google.com) — free tier |
 | `SAFE_BROWSING_API_KEY` | [Google Cloud Console](https://console.cloud.google.com) — free |
 
----
-
 ## Deployment
 
 - **Backend:** Render (free tier) — spins down after 15 min inactivity; first request after cold start takes ~30s
 - **Frontend:** Vercel (free tier) — always on, globally distributed
-
----
 
 ## License
 
