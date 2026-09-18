@@ -1,6 +1,5 @@
 fastapi
 uvicorn[standard]
-streamlit
 python-dotenv
 requests
 pandas
@@ -10,6 +9,7 @@ lightgbm
 python-Levenshtein
 tldextract
 joblib
-google-generativeai
+google-genai
 pytest
 pytest-asyncio
+httpx
