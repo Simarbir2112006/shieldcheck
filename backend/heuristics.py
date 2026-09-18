@@ -1,19 +1,10 @@
 """
-URL feature extraction + LightGBM phishing classifier for ShieldCheck.
-
 Training data:
   - Phishing (label=1): PhishTank verified-online feed
     (https://data.phishtank.com/data/online-valid.csv)
   - Legitimate (label=0): URLs built from a hardcoded sample of 500
     well-known domains (global top sites + Indian banking/fintech/e-commerce
     brands relevant to the target brand-impersonation list below)
-
-Run directly to (re)train and save the model:
-    python backend/heuristics.py
-
-Import predict() to score a single URL at inference time:
-    from heuristics import predict
-    predict("http://paypa1-secure.tk/login")
 """
 
 from __future__ import annotations
@@ -40,10 +31,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-# --------------------------------------------------------------------------
-# Paths
-# --------------------------------------------------------------------------
-
 BACKEND_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_DIR.parent
 MODEL_DIR = PROJECT_ROOT / "model"
@@ -51,10 +38,6 @@ MODEL_PATH = MODEL_DIR / "lgbm_phish.pkl"
 DATA_DIR = PROJECT_ROOT / "data"
 PHISHTANK_CSV = DATA_DIR / "online-valid.csv"
 PHISHTANK_URL = "https://data.phishtank.com/data/online-valid.csv"
-
-# --------------------------------------------------------------------------
-# Reference data
-# --------------------------------------------------------------------------
 
 # Brands most commonly impersonated in phishing URLs targeting this product's
 # customers (global + Indian banking/fintech/e-commerce). Used to compute the
@@ -203,7 +186,6 @@ def _shannon_entropy(s: str) -> float:
 
 
 def extract_features(url: str) -> dict[str, float]:
-    """Extract the 14 heuristic features used by the phishing classifier."""
     url = url.strip()
     if "://" not in url:
         url_for_parse = "http://" + url
@@ -211,7 +193,7 @@ def extract_features(url: str) -> dict[str, float]:
         url_for_parse = url
 
     parsed = urlparse(url_for_parse)
-    host = parsed.netloc.split(":")[0].split("@")[-1]  # strip userinfo/port
+    host = parsed.netloc.split(":")[0].split("@")[-1]
     ext = tldextract.extract(url_for_parse)
 
     domain_label = ext.domain or host
@@ -241,10 +223,6 @@ def extract_features(url: str) -> dict[str, float]:
     }
     return features
 
-
-# --------------------------------------------------------------------------
-# Dataset construction
-# --------------------------------------------------------------------------
 
 def _load_phishing_urls(max_samples: int | None = 6000, random_state: int = 42) -> list[str]:
     if not PHISHTANK_CSV.exists():
@@ -312,10 +290,6 @@ def build_dataset(max_phishing: int | None = 6000, random_state: int = 42) -> pd
     return pd.DataFrame(rows)
 
 
-# --------------------------------------------------------------------------
-# Training / evaluation
-# --------------------------------------------------------------------------
-
 def train(max_phishing: int | None = 6000, random_state: int = 42) -> lgb.LGBMClassifier:
     print("Building dataset...")
     df = build_dataset(max_phishing=max_phishing, random_state=random_state)
@@ -360,10 +334,6 @@ def train(max_phishing: int | None = 6000, random_state: int = 42) -> lgb.LGBMCl
     return model
 
 
-# --------------------------------------------------------------------------
-# Inference
-# --------------------------------------------------------------------------
-
 _model_cache: dict[str, Any] = {}
 
 
@@ -380,16 +350,6 @@ def _get_model():
 
 
 def predict(url: str) -> dict[str, Any]:
-    """
-    Score a single URL with the trained heuristic model.
-
-    Returns:
-        {
-            "score": float,             # phishing probability, 0-1
-            "features": dict,           # raw extracted feature values
-            "top_signals": list[str],   # human-readable top contributing signals
-        }
-    """
     model, feature_names = _get_model()
     features = extract_features(url)
     X = pd.DataFrame([features])[feature_names]

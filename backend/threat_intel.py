@@ -1,5 +1,3 @@
-"""External threat intelligence lookups: VirusTotal and Google Safe Browsing."""
-
 from __future__ import annotations
 
 import asyncio
@@ -24,8 +22,7 @@ _REQUEST_TIMEOUT = 15.0
 
 
 async def check_virustotal(url: str) -> dict[str, Any]:
-    """Submit a URL to VirusTotal and poll for the analysis verdict.
-
+    """
     Note: the analysis ID used to poll GET /analyses/{id} is the opaque id
     VirusTotal returns in the POST /urls response body (data.id) — it is
     NOT the base64-encoded URL. (The base64-encoded URL is a *different*
@@ -85,7 +82,6 @@ async def check_virustotal(url: str) -> dict[str, Any]:
 
 
 async def check_safe_browsing(url: str) -> dict[str, Any]:
-    """Check a URL against Google Safe Browsing's threat lists."""
     try:
         if not SAFE_BROWSING_API_KEY:
             raise RuntimeError("SAFE_BROWSING_API_KEY is not set")

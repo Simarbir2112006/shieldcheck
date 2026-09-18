@@ -1,5 +1,4 @@
-"""Gemini-based email text analysis for phishing/scam red flags.
-
+"""
 Note on model choice: the originally requested "gemini-1.5-flash" has been
 retired and 404s against the current API. This uses "gemini-flash-lite-latest"
 instead of the plain "gemini-flash-latest" alias: the latter currently
@@ -107,8 +106,7 @@ async def _call_gemini(email_text: str, retry_note: str | None = None) -> str:
 
 
 async def analyze(email_text: str) -> dict[str, Any]:
-    """Analyze email text for phishing/scam signals using Gemini.
-
+    """
     Retries once on failure. A JSON-parsing failure retries with an added
     note to return raw JSON; any other failure (e.g. a transient 5xx from
     Gemini being overloaded) retries the same prompt unchanged, since a

@@ -1,5 +1,3 @@
-"""Orchestrates the heuristics, threat-intel, and LLM detection layers."""
-
 from __future__ import annotations
 
 import asyncio

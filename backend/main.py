@@ -1,5 +1,3 @@
-"""FastAPI app exposing the ShieldCheck scan endpoint."""
-
 from __future__ import annotations
 
 import csv
